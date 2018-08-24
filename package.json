@@ -13,7 +13,7 @@
     "build:esm": "tsc -p ./tsconfig.esm.json",
     "build:cjs": "tsc -p ./tsconfig.cjs.json",
     "clear": "rm -rf ./lib ./cjs ./coverage",
-    "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx}\"",
+    "format": "prettier --write \"./*.{js,jsx,ts,tsx}\" \"./src/**/*.{js,jsx,ts,tsx}\"",
     "lint": "tslint -c ./tslint.json \"src/**/*\"",
     "lint:fix": "tslint --fix -c ./tslint.json \"src/**/*\"",
     "start": "yarn clear && yarn format && yarn lint:fix && yarn test && yarn build",
