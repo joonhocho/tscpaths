@@ -115,7 +115,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
   return modulePath;
 };
 
-const requireRegex = /require\(['"]([^'"]*)['"]\)/g;
+const requireRegex = /(?:import|require)\(['"]([^'"]*)['"]\)/g;
 const importRegex = /from ['"]([^'"]*)['"]/g;
 
 const replaceImportStatement = (
