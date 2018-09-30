@@ -4,11 +4,14 @@
 import * as program from 'commander';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { sync } from 'globby';
-import { dirname, join, relative, resolve } from 'path';
+import { dirname, relative, resolve } from 'path';
+import { loadConfig } from './util';
 
 program
   .version('0.0.1')
-  .option('-p, --project <file>', 'path to tsconfig.json');
+  .option('-p, --project <file>', 'path to tsconfig.json')
+  .option('-s, --src <path>', 'source root path')
+  .option('-o, --out <path>', 'output root path');
 
 program.on('--help', () => {
   console.log(`
@@ -18,67 +21,66 @@ program.on('--help', () => {
 
 program.parse(process.argv);
 
-const { project } = program;
+const { project, src, out } = program as {
+  project?: string;
+  src?: string;
+  out?: string;
+};
 if (!project) {
   throw new Error('--project must be specified');
 }
+if (!src) {
+  throw new Error('--src must be specified');
+}
 
-const configFile = join(process.cwd(), project);
+const configFile = resolve(process.cwd(), project);
+console.log(`tsconfig.json: ${configFile}`);
+const srcRoot = resolve(src);
+console.log(`src: ${srcRoot}`);
 
-const {
-  compilerOptions: { baseUrl, outDir, paths },
-  include,
-}: {
-  compilerOptions: {
-    baseUrl: string;
-    outDir: string;
-    paths: { [key: string]: string[] };
-  };
-  include: string[];
-  // tslint:disable-next-line no-var-requires
-} = require(configFile);
+const outRoot = out && resolve(out);
+console.log(`out: ${outRoot}`);
 
-/*
-"baseUrl": ".",
-"outDir": "lib",
-"paths": {
-  "src/*": ["src/*"]
-},
-*/
+const { baseUrl, outDir, paths } = loadConfig(configFile);
+
+if (!baseUrl) {
+  throw new Error('compilerOptions.baseUrl is not set');
+}
+if (!paths) {
+  throw new Error('compilerOptions.paths is not set');
+}
+if (!outDir) {
+  throw new Error('compilerOptions.outDir is not set');
+}
+console.log(`baseUrl: ${baseUrl}`);
+console.log(`outDir: ${outDir}`);
+console.log(`paths: ${JSON.stringify(paths, null, 2)}`);
 
 const configDir = dirname(configFile);
-const basePath = join(configDir, baseUrl);
-const toAbsPath = (x: string): string => join(basePath, x);
-const outPath = toAbsPath(outDir);
-const srcPaths = include
-  .filter((x) => x.endsWith('/**/*'))
-  .map((x) => toAbsPath(x.replace('/**/*', '')));
-const srcRoot = srcPaths.length === 1 ? srcPaths[0] : basePath;
-const outToSrc = (x: string): string => join(srcRoot, relative(outPath, x));
+
+const basePath = resolve(configDir, baseUrl);
+console.log(`basePath: ${basePath}`);
+
+const outPath = outRoot || resolve(basePath, outDir);
+console.log(`outPath: ${outPath}`);
+
+const outFileToSrcFile = (x: string): string =>
+  resolve(srcRoot, relative(outPath, x));
 
 const aliases = Object.keys(paths).map((alias) => ({
   prefix: alias.replace(/\*$/, ''),
   aliasPaths: paths[alias as keyof typeof paths].map((p) =>
-    join(basePath, p.replace(/\*$/, ''))
+    resolve(basePath, p.replace(/\*$/, ''))
   ),
 }));
+console.log(`aliases: ${JSON.stringify(aliases, null, 2)}`);
 
 const toRelative = (from: string, x: string): string => {
   const rel = relative(from, x);
   return rel.startsWith('.') ? rel : `./${rel}`;
 };
-const relToConfig = (x: string): string => toRelative(configDir, x);
 
-console.log(`
-tsconfig:
-  base = ${relToConfig(basePath)}
-  src = ${relToConfig(srcRoot)}
-  sources = ${srcPaths.map((x) => relToConfig(x + '/**/*'))}
-  out = ${relToConfig(outPath)}
-  aliases = ${aliases.map(({ prefix }) => prefix).join(', ')}
-`);
-
-const exts = ['.js', '.jsx', '.ts', '.tsx', '.d.ts'];
+const exts = ['.js', '.jsx', '.ts', '.tsx', '.d.ts', '.json'];
 
 const absToRel = (modulePath: string, outFile: string): string => {
   const alen = aliases.length;
@@ -87,19 +89,19 @@ const absToRel = (modulePath: string, outFile: string): string => {
 
     if (modulePath.startsWith(prefix)) {
       const modulePathRel = modulePath.substring(prefix.length);
-      const src = outToSrc(outFile);
+      const srcFile = outFileToSrcFile(outFile);
       const outRel = relative(basePath, outFile);
-      console.log(`${outRel} (source: ${relative(basePath, src)}):`);
+      console.log(`${outRel} (source: ${relative(basePath, srcFile)}):`);
       console.log(`\timport '${modulePath}'`);
       const len = aliasPaths.length;
       for (let i = 0; i < len; i += 1) {
         const apath = aliasPaths[i];
-        const moduleSrc = join(apath, modulePathRel);
+        const moduleSrc = resolve(apath, modulePathRel);
         if (
           existsSync(moduleSrc) ||
           exts.some((ext) => existsSync(moduleSrc + ext))
         ) {
-          const rel = toRelative(dirname(src), moduleSrc);
+          const rel = toRelative(dirname(srcFile), moduleSrc);
           console.log(
             `\treplacing '${modulePath}' -> '${rel}' referencing ${relative(
               basePath,
