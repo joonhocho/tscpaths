@@ -67,12 +67,14 @@ console.log(`outPath: ${outPath}`);
 const outFileToSrcFile = (x: string): string =>
   resolve(srcRoot, relative(outPath, x));
 
-const aliases = Object.keys(paths).map((alias) => ({
-  prefix: alias.replace(/\*$/, ''),
-  aliasPaths: paths[alias as keyof typeof paths].map((p) =>
-    resolve(basePath, p.replace(/\*$/, ''))
-  ),
-}));
+const aliases = Object.keys(paths)
+  .map((alias) => ({
+    prefix: alias.replace(/\*$/, ''),
+    aliasPaths: paths[alias as keyof typeof paths].map((p) =>
+      resolve(basePath, p.replace(/\*$/, ''))
+    ),
+  }))
+  .filter(({ prefix }) => prefix);
 console.log(`aliases: ${JSON.stringify(aliases, null, 2)}`);
 
 const toRelative = (from: string, x: string): string => {
