@@ -9,7 +9,7 @@ Replace absolute paths to relative paths after typescript compilation (tsc) duri
 \+ Compile time (no runtime dependencies)
 
 ## Getting Started
-First, install tscpaths using npm or yarn.
+First, install tscpaths as devDependency using npm or yarn.
 
 ```sh
 npm install --save-dev tscpaths
