@@ -37,6 +37,6 @@ If you know how, Pull Requests are welcome!
 # Disclaimer !!!!!
 This is not a mature project yet.
 
-It works for my use case which is relatively simple setup.
+It works for my setup so far.
 
-It may not work correctly if your setup is complicated, so please do some testing before pushing it to production!!!
+It may not work correctly if your setup is too complicated, so please do some testing before pushing it to production!!!
