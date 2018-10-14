@@ -79,7 +79,7 @@ console.log(`aliases: ${JSON.stringify(aliases, null, 2)}`);
 
 const toRelative = (from: string, x: string): string => {
   const rel = relative(from, x);
-  return rel.startsWith('.') ? rel : `./${rel}`;
+  return (rel.startsWith('.') ? rel : `./${rel}`).replace(/\\/g, '/');
 };
 
 const exts = ['.js', '.jsx', '.ts', '.tsx', '.d.ts', '.json'];
@@ -120,7 +120,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
 };
 
 const requireRegex = /(?:import|require)\(['"]([^'"]*)['"]\)/g;
-const importRegex = /from ['"]([^'"]*)['"]/g;
+const importRegex = /(?:import|from) ['"]([^'"]*)['"]/g;
 
 const replaceImportStatement = (
   orig: string,
