@@ -23,6 +23,14 @@ yarn add -D tscpaths
   "build": "tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src -o ./out",
 }
 ```
+
+### Options
+| flag         | description                                        |
+| ------------ | -------------------------------------------------- |
+| -p --project | project configuration file (tsconfig.json)         |
+| -s --src     | source code root directory                         |
+| -o --out     | output directory of transpiled code (tsc --outDir) |
+
 You need to provide -s (--src) and -o (--out), because it's hard to predict source and output paths based on tsconfig.json.
 
 I've tried a little and failed. :(
