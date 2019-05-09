@@ -95,6 +95,8 @@ const toRelative = (from: string, x: string): string => {
 
 const exts = ['.js', '.jsx', '.ts', '.tsx', '.d.ts', '.json'];
 
+let replaceCount = 0;
+
 const absToRel = (modulePath: string, outFile: string): string => {
   const alen = aliases.length;
   for (let j = 0; j < alen; j += 1) {
@@ -115,6 +117,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
           exts.some((ext) => existsSync(moduleSrc + ext))
         ) {
           const rel = toRelative(dirname(srcFile), moduleSrc);
+          replaceCount += 1;
           verboseLog(
             `\treplacing '${modulePath}' -> '${rel}' referencing ${relative(
               basePath,
@@ -124,7 +127,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
           return rel;
         }
       }
-      verboseLog(`\tcould not replace ${modulePath}`);
+      console.log(`could not replace ${modulePath}`);
     }
   }
   return modulePath;
@@ -133,15 +136,12 @@ const absToRel = (modulePath: string, outFile: string): string => {
 const requireRegex = /(?:import|require)\(['"]([^'"]*)['"]\)/g;
 const importRegex = /(?:import|from) ['"]([^'"]*)['"]/g;
 
-let replaceCount = 0;
-
 const replaceImportStatement = (
   orig: string,
   matched: string,
   outFile: string
 ): string => {
   const index = orig.indexOf(matched);
-  replaceCount += 1;
   return (
     orig.substring(0, index) +
     absToRel(matched, outFile) +
