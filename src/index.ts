@@ -11,7 +11,8 @@ program
   .version('0.0.1')
   .option('-p, --project <file>', 'path to tsconfig.json')
   .option('-s, --src <path>', 'source root path')
-  .option('-o, --out <path>', 'output root path');
+  .option('-o, --out <path>', 'output root path')
+  .option('-v, --verbose', 'output logs');
 
 program.on('--help', () => {
   console.log(`
@@ -21,11 +22,13 @@ program.on('--help', () => {
 
 program.parse(process.argv);
 
-const { project, src, out } = program as {
+const { project, src, out, verbose } = program as {
   project?: string;
   src?: string;
   out?: string;
+  verbose?: boolean;
 };
+
 if (!project) {
   throw new Error('--project must be specified');
 }
@@ -33,13 +36,21 @@ if (!src) {
   throw new Error('--src must be specified');
 }
 
+const verboseLog = (...args: any[]): void => {
+  if (verbose) {
+    console.log(...args);
+  }
+};
+
 const configFile = resolve(process.cwd(), project);
-console.log(`tsconfig.json: ${configFile}`);
+
 const srcRoot = resolve(src);
-console.log(`src: ${srcRoot}`);
 
 const outRoot = out && resolve(out);
-console.log(`out: ${outRoot}`);
+
+console.log(
+  `tscpaths --project ${configFile} --src ${srcRoot} --out ${outRoot}`
+);
 
 const { baseUrl, outDir, paths } = loadConfig(configFile);
 
@@ -52,17 +63,17 @@ if (!paths) {
 if (!outDir) {
   throw new Error('compilerOptions.outDir is not set');
 }
-console.log(`baseUrl: ${baseUrl}`);
-console.log(`outDir: ${outDir}`);
-console.log(`paths: ${JSON.stringify(paths, null, 2)}`);
+verboseLog(`baseUrl: ${baseUrl}`);
+verboseLog(`outDir: ${outDir}`);
+verboseLog(`paths: ${JSON.stringify(paths, null, 2)}`);
 
 const configDir = dirname(configFile);
 
 const basePath = resolve(configDir, baseUrl);
-console.log(`basePath: ${basePath}`);
+verboseLog(`basePath: ${basePath}`);
 
 const outPath = outRoot || resolve(basePath, outDir);
-console.log(`outPath: ${outPath}`);
+verboseLog(`outPath: ${outPath}`);
 
 const outFileToSrcFile = (x: string): string =>
   resolve(srcRoot, relative(outPath, x));
@@ -75,7 +86,7 @@ const aliases = Object.keys(paths)
     ),
   }))
   .filter(({ prefix }) => prefix);
-console.log(`aliases: ${JSON.stringify(aliases, null, 2)}`);
+verboseLog(`aliases: ${JSON.stringify(aliases, null, 2)}`);
 
 const toRelative = (from: string, x: string): string => {
   const rel = relative(from, x);
@@ -93,8 +104,8 @@ const absToRel = (modulePath: string, outFile: string): string => {
       const modulePathRel = modulePath.substring(prefix.length);
       const srcFile = outFileToSrcFile(outFile);
       const outRel = relative(basePath, outFile);
-      console.log(`${outRel} (source: ${relative(basePath, srcFile)}):`);
-      console.log(`\timport '${modulePath}'`);
+      verboseLog(`${outRel} (source: ${relative(basePath, srcFile)}):`);
+      verboseLog(`\timport '${modulePath}'`);
       const len = aliasPaths.length;
       for (let i = 0; i < len; i += 1) {
         const apath = aliasPaths[i];
@@ -104,7 +115,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
           exts.some((ext) => existsSync(moduleSrc + ext))
         ) {
           const rel = toRelative(dirname(srcFile), moduleSrc);
-          console.log(
+          verboseLog(
             `\treplacing '${modulePath}' -> '${rel}' referencing ${relative(
               basePath,
               moduleSrc
@@ -113,7 +124,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
           return rel;
         }
       }
-      console.log(`\tcould not replace ${modulePath}`);
+      verboseLog(`\tcould not replace ${modulePath}`);
     }
   }
   return modulePath;
@@ -122,12 +133,15 @@ const absToRel = (modulePath: string, outFile: string): string => {
 const requireRegex = /(?:import|require)\(['"]([^'"]*)['"]\)/g;
 const importRegex = /(?:import|from) ['"]([^'"]*)['"]/g;
 
+let replaceCount = 0;
+
 const replaceImportStatement = (
   orig: string,
   matched: string,
   outFile: string
 ): string => {
   const index = orig.indexOf(matched);
+  replaceCount += 1;
   return (
     orig.substring(0, index) +
     absToRel(matched, outFile) +
@@ -150,12 +164,19 @@ const files = sync(`${outPath}/**/*.{js,jsx,ts,tsx}`, {
   noDir: true,
 } as any).map((x) => resolve(x));
 
+let changedFileCount = 0;
+
 const flen = files.length;
 for (let i = 0; i < flen; i += 1) {
   const file = files[i];
   const text = readFileSync(file, 'utf8');
+  const prevReplaceCount = replaceCount;
   const newText = replaceAlias(text, file);
   if (text !== newText) {
+    changedFileCount += 1;
+    console.log(`${file}: replaced ${replaceCount - prevReplaceCount} paths`);
     writeFileSync(file, newText, 'utf8');
   }
 }
+
+console.log(`Replaced ${replaceCount} paths in ${changedFileCount} files`);
