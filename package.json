@@ -2,11 +2,11 @@
   "name": "tscpaths",
   "version": "0.0.7",
   "description": "Replace absolute paths to relative paths after typescript compilation",
-  "main": "cjs/index.js",
-  "module": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "main": "cjs/resolve-paths.js",
+  "module": "lib/resolve-paths.js",
+  "types": "lib/resolve-paths.d.ts",
   "bin": {
-    "tscpaths": "cjs/index.js"
+    "tscpaths": "cjs/run.js"
   },
   "scripts": {
     "build": "yarn build:esm && yarn build:cjs",
@@ -41,7 +41,6 @@
   },
   "homepage": "https://github.com/joonhocho/tscpaths#readme",
   "devDependencies": {
-    "@types/globby": "^8.0.2",
     "@types/jest": "^24.0.11",
     "@types/node": "^11.12.0",
     "jest": "^24.5.0",
@@ -54,6 +53,6 @@
   },
   "dependencies": {
     "commander": "^2.19.0",
-    "globby": "^8.0.2"
+    "globby": "^9.2.0"
   }
 }
