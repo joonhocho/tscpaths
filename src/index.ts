@@ -52,6 +52,8 @@ const missingDirectoryErr = (directory: string, flag: string) => {
   exitingErr();
 };
 
+const verboseLog = (log: any) => verbose && console.log(log);
+
 const tsconfig = require(configFile);
 !tsconfig.hasOwnProperty('compilerOptions') &&
   missingConfigErr('compilerOptions');
@@ -83,19 +85,17 @@ if (!outDir) {
   throw new Error('compilerOptions.outDir is not set');
 }
 
-if (verbose) {
-  console.log(`baseUrl: ${baseUrl}`);
-  console.log(`outDir: ${outDir}`);
-  console.log(`paths: ${JSON.stringify(paths, null, 2)}`);
-}
+verboseLog(`baseUrl: ${baseUrl}`);
+verboseLog(`outDir: ${outDir}`);
+verboseLog(`paths: ${JSON.stringify(paths, null, 2)}`);
 
 const configDir = dirname(configFile);
 
 const basePath = resolve(configDir, baseUrl);
-verbose && console.log(`basePath: ${basePath}`);
+verboseLog(`basePath: ${basePath}`);
 
 const outPath = outRoot || resolve(basePath, outDir);
-verbose && console.log(`outPath: ${outPath}`);
+verboseLog(`outPath: ${outPath}`);
 
 const outFileToSrcFile = (x: string): string =>
   resolve(srcRoot, relative(outPath, x));
@@ -108,7 +108,7 @@ const aliases = Object.keys(paths)
     ),
   }))
   .filter(({ prefix }) => prefix);
-verbose && console.log(`aliases: ${JSON.stringify(aliases, null, 2)}`);
+verboseLog(`aliases: ${JSON.stringify(aliases, null, 2)}`);
 
 const toRelative = (from: string, x: string): string => {
   const rel = relative(from, x);
@@ -129,7 +129,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
       const outRel = relative(basePath, outFile);
       verbose &&
         console.log(`${outRel} (source: ${relative(basePath, srcFile)}):`);
-      verbose && console.log(`\timport '${modulePath}'`);
+      verboseLog(`\timport '${modulePath}'`);
       const len = aliasPaths.length;
       for (let i = 0; i < len; i += 1) {
         const apath = aliasPaths[i];
@@ -150,7 +150,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
           return rel;
         }
       }
-      verbose && console.log(`\tcould not replace ${modulePath}`);
+      verboseLog(`\tcould not replace ${modulePath}`);
     }
   }
 
