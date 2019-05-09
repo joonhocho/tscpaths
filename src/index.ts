@@ -127,8 +127,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
       const modulePathRel = modulePath.substring(prefix.length);
       const srcFile = outFileToSrcFile(outFile);
       const outRel = relative(basePath, outFile);
-      verbose &&
-        console.log(`${outRel} (source: ${relative(basePath, srcFile)}):`);
+      verboseLog(`${outRel} (source: ${relative(basePath, srcFile)}):`);
       verboseLog(`\timport '${modulePath}'`);
       const len = aliasPaths.length;
       for (let i = 0; i < len; i += 1) {
@@ -140,13 +139,12 @@ const absToRel = (modulePath: string, outFile: string): string => {
         ) {
           const rel = toRelative(dirname(srcFile), moduleSrc);
 
-          verbose &&
-            console.log(
-              `\treplacing '${modulePath}' -> '${rel}' referencing ${relative(
-                basePath,
-                moduleSrc
-              )}`
-            );
+          verboseLog(
+            `\treplacing '${modulePath}' -> '${rel}' referencing ${relative(
+              basePath,
+              moduleSrc
+            )}`
+          );
           return rel;
         }
       }
