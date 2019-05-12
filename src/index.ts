@@ -22,18 +22,15 @@ program.on('--help', () => {
 
 program.parse(process.argv);
 
-const { project, src, out, verbose } = program as {
+const { project, src: flagSrc, out: flagOut, verbose = false } = program as {
   project?: string;
-  src?: string;
-  out?: string;
+  src?: string | undefined;
+  out?: string | undefined;
   verbose?: boolean;
 };
 
 if (!project) {
   throw new Error('--project must be specified');
-}
-if (!src) {
-  throw new Error('--src must be specified');
 }
 
 const verboseLog = (...args: any[]): void => {
@@ -44,15 +41,78 @@ const verboseLog = (...args: any[]): void => {
 
 const configFile = resolve(process.cwd(), project);
 
-const srcRoot = resolve(src);
+console.log(`Using tsconfig: ${configFile}`);
 
-const outRoot = out && resolve(out);
+const exitingErr = (): any => {
+  throw new Error('--- exiting tscpaths due to parameters missing ---');
+};
 
-console.log(
-  `tscpaths --project ${configFile} --src ${srcRoot} --out ${outRoot}`
-);
+const missingConfigErr = (property: string): any => {
+  console.error(
+    `Whoops! Please set ${property} in your tsconfig or supply a flag`
+  );
+  exitingErr();
+};
 
-const { baseUrl, outDir, paths } = loadConfig(configFile);
+const missingDirectoryErr = (directory: string, flag: string): any => {
+  console.error(
+    `Whoops! ${directory} must be specified in your project => --project ${project}, or flagged with directory => ${flag} './path'`
+  );
+  exitingErr();
+};
+
+// Imported the TS Config
+const returnedTsConfig = loadConfig(configFile);
+
+// Destructure only the necessary keys, and rename to give context
+const {
+  baseUrl,
+  paths,
+  outDir: tsConfigOutDir = '',
+  rootDir: tsConfigRootDir = '',
+} = returnedTsConfig;
+
+// If no flagSrc or tsConfigRootDir, error
+if (!flagSrc && tsConfigRootDir === '') {
+  missingConfigErr('compilerOptions.rootDir');
+}
+
+// If no flagOut or tsConfigOutDir, error
+if (!flagOut && tsConfigOutDir === '') {
+  missingConfigErr('compilerOptions.outDir');
+}
+
+// Are we going to use the flag or ts config for src?
+let tscpathsSrcDir: string;
+if (flagSrc) {
+  console.log('Using flag --src');
+  tscpathsSrcDir = resolve(flagSrc);
+} else {
+  console.log('Using compilerOptions.rootDir from your tsconfig');
+  tscpathsSrcDir = resolve(tsConfigRootDir);
+}
+if (!tscpathsSrcDir) {
+  missingDirectoryErr('rootDir', '--src');
+}
+
+// Log which src is being used
+console.log(`Using src: ${tscpathsSrcDir}`);
+
+// Are we going to use the flag or ts config for out?
+let tscpathsOutDir: string;
+if (flagOut) {
+  console.log('Using flag --out');
+  tscpathsOutDir = resolve(flagOut);
+} else {
+  console.log('Using compilerOptions.outDir from your tsconfig');
+  tscpathsOutDir = resolve(tsConfigOutDir);
+}
+if (!tscpathsOutDir) {
+  missingDirectoryErr('outDir', '--out');
+}
+
+// Log which out is being used
+console.log(`Using out: ${tscpathsOutDir}`);
 
 if (!baseUrl) {
   throw new Error('compilerOptions.baseUrl is not set');
@@ -60,11 +120,16 @@ if (!baseUrl) {
 if (!paths) {
   throw new Error('compilerOptions.paths is not set');
 }
-if (!outDir) {
+if (!tscpathsOutDir) {
   throw new Error('compilerOptions.outDir is not set');
 }
+if (!tscpathsSrcDir) {
+  throw new Error('compilerOptions.rootDir is not set');
+}
+
 verboseLog(`baseUrl: ${baseUrl}`);
-verboseLog(`outDir: ${outDir}`);
+verboseLog(`rootDir: ${tscpathsSrcDir}`);
+verboseLog(`outDir: ${tscpathsOutDir}`);
 verboseLog(`paths: ${JSON.stringify(paths, null, 2)}`);
 
 const configDir = dirname(configFile);
@@ -72,11 +137,11 @@ const configDir = dirname(configFile);
 const basePath = resolve(configDir, baseUrl);
 verboseLog(`basePath: ${basePath}`);
 
-const outPath = outRoot || resolve(basePath, outDir);
+const outPath = tscpathsOutDir || resolve(basePath, tscpathsOutDir);
 verboseLog(`outPath: ${outPath}`);
 
 const outFileToSrcFile = (x: string): string =>
-  resolve(srcRoot, relative(outPath, x));
+  resolve(tscpathsSrcDir, relative(outPath, x));
 
 const aliases = Object.keys(paths)
   .map((alias) => ({
@@ -99,6 +164,7 @@ let replaceCount = 0;
 
 const absToRel = (modulePath: string, outFile: string): string => {
   const alen = aliases.length;
+
   for (let j = 0; j < alen; j += 1) {
     const { prefix, aliasPaths } = aliases[j];
 
@@ -106,8 +172,10 @@ const absToRel = (modulePath: string, outFile: string): string => {
       const modulePathRel = modulePath.substring(prefix.length);
       const srcFile = outFileToSrcFile(outFile);
       const outRel = relative(basePath, outFile);
+
       verboseLog(`${outRel} (source: ${relative(basePath, srcFile)}):`);
       verboseLog(`\timport '${modulePath}'`);
+
       const len = aliasPaths.length;
       for (let i = 0; i < len; i += 1) {
         const apath = aliasPaths[i];
@@ -117,7 +185,9 @@ const absToRel = (modulePath: string, outFile: string): string => {
           exts.some((ext) => existsSync(moduleSrc + ext))
         ) {
           const rel = toRelative(dirname(srcFile), moduleSrc);
+
           replaceCount += 1;
+
           verboseLog(
             `\treplacing '${modulePath}' -> '${rel}' referencing ${relative(
               basePath,
@@ -127,9 +197,10 @@ const absToRel = (modulePath: string, outFile: string): string => {
           return rel;
         }
       }
-      console.log(`could not replace ${modulePath}`);
+      verboseLog(`\tcould not replace ${modulePath}`);
     }
   }
+
   return modulePath;
 };
 
@@ -167,6 +238,8 @@ const files = sync(`${outPath}/**/*.{js,jsx,ts,tsx}`, {
 let changedFileCount = 0;
 
 const flen = files.length;
+let count = 0;
+
 for (let i = 0; i < flen; i += 1) {
   const file = files[i];
   const text = readFileSync(file, 'utf8');
@@ -174,8 +247,9 @@ for (let i = 0; i < flen; i += 1) {
   const newText = replaceAlias(text, file);
   if (text !== newText) {
     changedFileCount += 1;
-    console.log(`${file}: replaced ${replaceCount - prevReplaceCount} paths`);
+    verboseLog(`${file}: replaced ${replaceCount - prevReplaceCount} paths`);
     writeFileSync(file, newText, 'utf8');
+    count = count + 1;
   }
 }
 

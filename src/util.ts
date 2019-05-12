@@ -13,6 +13,7 @@ export interface IRawTSConfig {
   compilerOptions?: {
     baseUrl?: string;
     outDir?: string;
+    rootDir?: string;
     paths?: { [key: string]: string[] };
   };
 }
@@ -20,6 +21,8 @@ export interface IRawTSConfig {
 export interface ITSConfig {
   baseUrl?: string;
   outDir?: string;
+  rootDir?: string;
+  compilerOptions?: object;
   paths?: { [key: string]: string[] };
 }
 
@@ -37,9 +40,10 @@ export const mapPaths = (
 export const loadConfig = (file: string): ITSConfig => {
   const {
     extends: ext,
-    compilerOptions: { baseUrl, outDir, paths } = {
+    compilerOptions: { baseUrl, outDir, rootDir, paths } = {
       baseUrl: undefined,
       outDir: undefined,
+      rootDir: undefined,
       paths: undefined,
     },
   } = require(file) as IRawTSConfig;
@@ -50,6 +54,9 @@ export const loadConfig = (file: string): ITSConfig => {
   }
   if (outDir) {
     config.outDir = outDir;
+  }
+  if (rootDir) {
+    config.rootDir = rootDir;
   }
   if (paths) {
     config.paths = paths;

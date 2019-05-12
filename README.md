@@ -20,31 +20,64 @@ yarn add -D tscpaths
 ## Add it to your build scripts in package.json
 ```json
 "scripts": {
-  "build": "tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src -o ./out",
+  "build": "tsc --project tsconfig.json && tscpaths --project tsconfig.json",
 }
 ```
 
-### Options
-| flag         | description                                        |
-| ------------ | -------------------------------------------------- |
-| -p --project | project configuration file (tsconfig.json)         |
-| -s --src     | source code root directory                         |
-| -o --out     | output directory of transpiled code (tsc --outDir) |
+## Building only the types
+You can also setup a seperate tsconfig file just for types like `tsconfig.types.json` if you are also compiling with Babel.
+```json
+// tsconfig.types.json
+{
+  "extends": "./tsconfig",
+  "compilerOptions": {
+    "module": "amd",
+    "outDir": "dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": false,
+    "isolatedModules": false,
+    "noEmit": false,
+    "allowJs": false,
+    "emitDeclarationOnly": true
+  },
+  "exclude": ["**/*.test.ts"]
+}
+```
+And then target that
+```json
+"scripts": {
+  "build:types": "tsc --project tsconfig.types.json && tscpaths -project tsconfig.types.json",
+}
+```
 
-You need to provide -s (--src) and -o (--out), because it's hard to predict source and output paths based on tsconfig.json.
+Your final build script might look like
+```json
+"scripts": {
+  "build": "yarn build:commonjs && yarn build:types",
+}
+```
 
-I've tried a little and failed. :(
+## Options
+| flag         | description                                                                          |
+| ------------ | ------------------------------------------------------------------------------------ |
+| -p --project | project configuration file (tsconfig.json)                                           |
+| -s --src     | source code root directory (overrides the tsconfig provided)                         |
+| -o --out     | output directory of transpiled code (tsc --outDir) (overrides the tsconfig provided) |
+| -v --verbose | console.log all the events                                                           |
 
-`tsc` does some magic to determine source and output paths and I haven't dived too deep to mimic it.
-
-For now, it's simpler to provide the paths manually.
-
-If you know how, Pull Requests are welcome!
-
-
-# Disclaimer !!!!!
-This is not a mature project yet.
+# Disclaimer
+This is not a mature project yet. Pull Requests are welcome!
 
 It works for my setup so far.
 
 It may not work correctly if your setup is too complicated, so please do some testing before pushing it to production!!!
+
+
+# Changelog
+
+>  You need to provide -s (--src) and -o (--out), because it's hard to predict source and output paths based on tsconfig.json.
+>  
+>  I've tried a little and failed. :(
+
+The above is no longer neccesary <-- got you fam: @jonkwheeler

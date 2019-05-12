@@ -8,6 +8,7 @@
     "align": false,
     "array-type": [true, "array-simple"],
     "import-name": false,
+    "max-line-length": false,
     "no-boolean-literal-compare": false,
     "no-empty-interface": false,
     "no-inferrable-types": true,
