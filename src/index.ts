@@ -33,7 +33,14 @@ if (!project) {
   throw new Error('--project must be specified');
 }
 
+const verboseLog = (...args: any[]): void => {
+  if (verbose) {
+    console.log(...args);
+  }
+};
+
 const configFile = resolve(process.cwd(), project);
+
 console.log(`Using tsconfig: ${configFile}`);
 
 const exitingErr = (): any => {
@@ -155,6 +162,8 @@ const toRelative = (from: string, x: string): string => {
 
 const exts = ['.js', '.jsx', '.ts', '.tsx', '.d.ts', '.json'];
 
+let replaceCount = 0;
+
 const absToRel = (modulePath: string, outFile: string): string => {
   const alen = aliases.length;
 
@@ -167,7 +176,6 @@ const absToRel = (modulePath: string, outFile: string): string => {
       const outRel = relative(basePath, outFile);
 
       verboseLog(`${outRel} (source: ${relative(basePath, srcFile)}):`);
-
       verboseLog(`\timport '${modulePath}'`);
 
       const len = aliasPaths.length;
@@ -179,6 +187,8 @@ const absToRel = (modulePath: string, outFile: string): string => {
           exts.some((ext) => existsSync(moduleSrc + ext))
         ) {
           const rel = toRelative(dirname(srcFile), moduleSrc);
+
+          replaceCount += 1;
 
           verboseLog(
             `\treplacing '${modulePath}' -> '${rel}' referencing ${relative(
@@ -227,17 +237,23 @@ const files = sync(`${outPath}/**/*.{js,jsx,ts,tsx}`, {
   noDir: true,
 } as any).map((x) => resolve(x));
 
+let changedFileCount = 0;
+
 const flen = files.length;
 let count = 0;
 
 for (let i = 0; i < flen; i += 1) {
   const file = files[i];
   const text = readFileSync(file, 'utf8');
+  const prevReplaceCount = replaceCount;
   const newText = replaceAlias(text, file);
   if (text !== newText) {
+    changedFileCount += 1;
+    console.log(`${file}: replaced ${replaceCount - prevReplaceCount} paths`);
     writeFileSync(file, newText, 'utf8');
     count = count + 1;
   }
 }
 
-console.log(`Successfully resolved ${count} paths with tscpaths.`);
+console.log(`Replaced ${replaceCount} paths in ${changedFileCount} files`);
+
