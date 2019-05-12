@@ -186,7 +186,6 @@ const absToRel = (modulePath: string, outFile: string): string => {
               moduleSrc
             )}`
           );
-
           return rel;
         }
       }

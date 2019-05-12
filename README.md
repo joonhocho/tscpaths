@@ -20,7 +20,7 @@ yarn add -D tscpaths
 ## Add it to your build scripts in package.json
 ```json
 "scripts": {
-  "build": "tsc --project tsconfig.json && tscpaths -project tsconfig.json",
+  "build": "tsc --project tsconfig.json && tscpaths --project tsconfig.json",
 }
 ```
 
