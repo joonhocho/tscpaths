@@ -90,6 +90,10 @@ verboseLog(`aliases: ${JSON.stringify(aliases, null, 2)}`);
 
 const toRelative = (from: string, x: string): string => {
   const rel = relative(from, x);
+
+  const matchNodeModules = x.match(/.*\/node_modules\//);
+  if (matchNodeModules) return relative(matchNodeModules[0], x);
+
   return (rel.startsWith('.') ? rel : `./${rel}`).replace(/\\/g, '/');
 };
 
