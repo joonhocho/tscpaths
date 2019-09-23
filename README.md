@@ -30,6 +30,7 @@ yarn add -D tscpaths
 | -p --project | project configuration file (tsconfig.json)         |
 | -s --src     | source code root directory                         |
 | -o --out     | output directory of transpiled code (tsc --outDir) |
+| --silent     | silence the console output                         |
 
 You need to provide -s (--src) and -o (--out), because it's hard to predict source and output paths based on tsconfig.json.
 
