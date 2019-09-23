@@ -12,7 +12,8 @@ program
   .option('-p, --project <file>', 'path to tsconfig.json')
   .option('-s, --src <path>', 'source root path')
   .option('-o, --out <path>', 'output root path')
-  .option('-v, --verbose', 'output logs');
+  .option('-v, --verbose', 'output logs')
+  .option('--silent', 'silence the console output');
 
 program.on('--help', () => {
   console.log(`
@@ -22,11 +23,12 @@ program.on('--help', () => {
 
 program.parse(process.argv);
 
-const { project, src, out, verbose } = program as {
+const { project, src, out, verbose, silent } = program as {
   project?: string;
   src?: string;
   out?: string;
   verbose?: boolean;
+  silent?: boolean;
 };
 
 if (!project) {
@@ -35,6 +37,12 @@ if (!project) {
 if (!src) {
   throw new Error('--src must be specified');
 }
+
+const log = (...args: any[]): void => {
+  if (!silent) {
+    console.log(...args);
+  }
+};
 
 const verboseLog = (...args: any[]): void => {
   if (verbose) {
@@ -48,9 +56,7 @@ const srcRoot = resolve(src);
 
 const outRoot = out && resolve(out);
 
-console.log(
-  `tscpaths --project ${configFile} --src ${srcRoot} --out ${outRoot}`
-);
+log(`tscpaths --project ${configFile} --src ${srcRoot} --out ${outRoot}`);
 
 const { baseUrl, outDir, paths } = loadConfig(configFile);
 
@@ -174,9 +180,9 @@ for (let i = 0; i < flen; i += 1) {
   const newText = replaceAlias(text, file);
   if (text !== newText) {
     changedFileCount += 1;
-    console.log(`${file}: replaced ${replaceCount - prevReplaceCount} paths`);
+    log(`${file}: replaced ${replaceCount - prevReplaceCount} paths`);
     writeFileSync(file, newText, 'utf8');
   }
 }
 
-console.log(`Replaced ${replaceCount} paths in ${changedFileCount} files`);
+log(`Replaced ${replaceCount} paths in ${changedFileCount} files`);
