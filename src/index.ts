@@ -102,7 +102,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
   for (let j = 0; j < alen; j += 1) {
     const { prefix, aliasPaths } = aliases[j];
 
-    if (modulePath.startsWith(prefix)) {
+    if (modulePath.startsWith(prefix) || modulePath === prefix.replace(/\/$/, '')) {
       const modulePathRel = modulePath.substring(prefix.length);
       const srcFile = outFileToSrcFile(outFile);
       const outRel = relative(basePath, outFile);
