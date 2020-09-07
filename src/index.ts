@@ -12,7 +12,8 @@ program
   .option('-p, --project <file>', 'path to tsconfig.json')
   .option('-s, --src <path>', 'source root path')
   .option('-o, --out <path>', 'output root path')
-  .option('-v, --verbose', 'output logs');
+  .option('-v, --verbose', 'output logs')
+  .option('-b, --build', 'append build path to paths');
 
 program.on('--help', () => {
   console.log(`
@@ -22,10 +23,11 @@ program.on('--help', () => {
 
 program.parse(process.argv);
 
-const { project, src, out, verbose } = program as {
+const { project, src, out, build, verbose } = program as {
   project?: string;
   src?: string;
   out?: string;
+  build?: boolean;
   verbose?: boolean;
 };
 
@@ -77,15 +79,20 @@ verboseLog(`outPath: ${outPath}`);
 
 const outFileToSrcFile = (x: string): string =>
   resolve(srcRoot, relative(outPath, x));
-
 const aliases = Object.keys(paths)
   .map((alias) => ({
     prefix: alias.replace(/\*$/, ''),
-    aliasPaths: paths[alias as keyof typeof paths].map((p) =>
-      resolve(basePath, p.replace(/\*$/, ''))
+    aliasPaths: paths[alias as keyof typeof paths].map((p) => {
+      let path = p.replace(/\*$/, '');
+      if (build) {
+        path = `${outDir}/${path}`
+      }
+      return resolve(basePath, path);
+    }
     ),
   }))
   .filter(({ prefix }) => prefix);
+
 verboseLog(`aliases: ${JSON.stringify(aliases, null, 2)}`);
 
 const toRelative = (from: string, x: string): string => {
@@ -128,6 +135,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
         }
       }
       console.log(`could not replace ${modulePath}`);
+      process.exit(1); 
     }
   }
   return modulePath;
