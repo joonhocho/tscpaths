@@ -12,7 +12,8 @@ program
   .option('-p, --project <file>', 'path to tsconfig.json')
   .option('-s, --src <path>', 'source root path')
   .option('-o, --out <path>', 'output root path')
-  .option('-v, --verbose', 'output logs');
+  .option('-v, --verbose', 'output logs')
+  .option('-q, --quiet', 'less logs mode');
 
 program.on('--help', () => {
   console.log(`
@@ -22,11 +23,12 @@ program.on('--help', () => {
 
 program.parse(process.argv);
 
-const { project, src, out, verbose } = program as {
+const { project, src, out, verbose, quiet } = program as {
   project?: string;
   src?: string;
   out?: string;
   verbose?: boolean;
+  quiet?: boolean;
 };
 
 if (!project) {
@@ -37,7 +39,7 @@ if (!src) {
 }
 
 const verboseLog = (...args: any[]): void => {
-  if (verbose) {
+  if (!quiet && verbose) {
     console.log(...args);
   }
 };
@@ -48,9 +50,10 @@ const srcRoot = resolve(src);
 
 const outRoot = out && resolve(out);
 
-console.log(
-  `tscpaths --project ${configFile} --src ${srcRoot} --out ${outRoot}`
-);
+if (!quiet)
+  console.log(
+    `tscpaths --project ${configFile} --src ${srcRoot} --out ${outRoot}`
+  );
 
 const { baseUrl, outDir, paths } = loadConfig(configFile);
 
@@ -96,6 +99,8 @@ const toRelative = (from: string, x: string): string => {
 const exts = ['.js', '.jsx', '.ts', '.tsx', '.d.ts', '.json'];
 
 let replaceCount = 0;
+
+if (quiet) console.log('Replacing...');
 
 const absToRel = (modulePath: string, outFile: string): string => {
   const alen = aliases.length;
@@ -174,7 +179,8 @@ for (let i = 0; i < flen; i += 1) {
   const newText = replaceAlias(text, file);
   if (text !== newText) {
     changedFileCount += 1;
-    console.log(`${file}: replaced ${replaceCount - prevReplaceCount} paths`);
+    if (!quiet)
+      console.log(`${file}: replaced ${replaceCount - prevReplaceCount} paths`);
     writeFileSync(file, newText, 'utf8');
   }
 }
