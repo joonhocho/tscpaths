@@ -81,9 +81,13 @@ const outFileToSrcFile = (x: string): string =>
 const aliases = Object.keys(paths)
   .map((alias) => ({
     prefix: alias.replace(/\*$/, ''),
-    aliasPaths: paths[alias as keyof typeof paths].map((p) =>
-      resolve(basePath, p.replace(/\*$/, ''))
-    ),
+    aliasPaths: paths[alias as keyof typeof paths].map((p) => {
+      const parts = p.split('*');
+      return {
+        prefix: resolve(basePath, parts[0]),
+        suffix: parts.length === 1 ? null: parts[1].startsWith('/') || parts[1].startsWith('\\') ? parts[1].substring(1) : parts[1],
+      };
+    }),
   }))
   .filter(({ prefix }) => prefix);
 verboseLog(`aliases: ${JSON.stringify(aliases, null, 2)}`);
@@ -111,7 +115,7 @@ const absToRel = (modulePath: string, outFile: string): string => {
       const len = aliasPaths.length;
       for (let i = 0; i < len; i += 1) {
         const apath = aliasPaths[i];
-        const moduleSrc = resolve(apath, modulePathRel);
+        const moduleSrc = apath.suffix ? resolve(apath.prefix, modulePathRel, apath.suffix) : resolve(apath.prefix, modulePathRel);
         if (
           existsSync(moduleSrc) ||
           exts.some((ext) => existsSync(moduleSrc + ext))
